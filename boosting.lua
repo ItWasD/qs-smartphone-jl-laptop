@@ -1,167 +1,142 @@
 local QBCore = exports['qb-core']:GetCoreObject()
-local MaxPools = { -- Contains all the the amount of contracts avaible every restart, once a contract has started or declined it gets back into the pool
-    ["D"] = 25,
-    ["C"] = 20,
-    ["B"] = 15,
-    ["A"] = 10,
-    ["A+"] = 5,
-    ["S"] = 3,
-    ["S+"] = 1,
-}
+local Contracts = {}
+local PZone = nil
+local PZone2 = nil
+local NetID = nil
+local missionBlip = nil
+local inZone = false
+local inVin = false
+local dropoffBlip = nil
 
-local cars = {
-    ["D"] = {},
-    ["C"] = {},
-    ["B"] = {},
-    ["A"] = {},
-    ["A+"] = {},
-    ["S"] = {},
-    ["S+"] = {},
-}
+local inQueue = false
 
-local CheckedVin = {
-
-}
+local currentCops = 0
 
 
-CreateThread(function()
-    while not QBCore do Wait(250) end
+---- Notify functions ----
 
-    for k, v in pairs(QBCore.Shared.Vehicles) do
-        if v['tier'] and cars[v['tier']] then
-            cars[v['tier']][#cars[v['tier']] + 1] = k
-        end
-    end
-end)
-
-local currentRuns = {}
-local ActivePlates = {} -- Handle all the active plates and syncs all the data shit
-local currentContracts = {}
-local LookingForContracts = {}
-
-
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.info.phonenotify'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.info.tracker_backon'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.info.bought_boost'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.info.rewardboost'),
         text = text,
         icon = "./img/apps/mail.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.tracker_off'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.youllbepaid'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.gps_dropoff'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.received_reward'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.disable_tracker'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.success.vin_dropoff'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.error.disable_fail'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.error.no_tracker'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.error.get_away'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.error.cancelboost'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.blip.dropoff'),
         text = text,
         icon = "./img/apps/darkweb.png",
         timeout = time
     })
 end
-local function Notify(src, text, type, time)
-    TriggerClientEvent('qs-smartphone:client:notify', src, {
+local function Notify(text, type, time)
+    TriggerEvent('qs-smartphone:client:notify', {
         title = Lang:t('boosting.blip.vinscratch'),
         text = text,
         icon = "./img/apps/darkweb.png",
@@ -169,899 +144,701 @@ local function Notify(src, text, type, time)
     })
 end
 
--- ** EVERYTHING TO DO WITH DROP OFFS AND VINSCRATCH ** --
----@param Tier any
----@param Type "boosting" | "vinscratch"
-local function ResetAnotherShit(Tier, Type)
-    SetTimeout(5 * 60000, function()
-        if Type == "boosting" then
-            Config.Boosting.ReturnLocation[Tier].isBusy = false
-        elseif Type == "vinscratch" then
-            Config.Boosting.VinScratch[Tier].isBusy = false
-        end
+-- ALL THE BLIP FUNCTIONS --
+local function DelayDelivery()
+    SetTimeout(math.random(10, 30 * 1000), function()
+        TriggerServerEvent('jl-laptop:server:FinalDestination')
     end)
 end
 
----@param type "boosting" | "vinscratch"
-local function GetRandomDropOff(type)
-    if not type then type = "boosting" end
-    local Locations = {}
-    if type == "boosting" then
-        for i = 1, #Config.Boosting.ReturnLocation do
-            if not Config.Boosting.ReturnLocation[i].isBusy then
-                Locations[#Locations + 1] = i
-            end
-        end
-        local location = Locations[math.random(1, #Locations)]
-        return Config.Boosting.ReturnLocation[Locations[location]].coords, location
-    elseif type == "vinscratch" then
-        for i = 1, #Config.Boosting.VinScratch do
-            if not Config.Boosting.VinScratch[i].isBusy then
-                Locations[#Locations + 1] = i
-            end
-        end
-        local location = Locations[math.random(1, #Locations)]
-        return Config.Boosting.VinScratch[Locations[location]].coords, location
-    end
-end
-
-RegisterNetEvent('jl-laptop:server:FinalDestination', function()
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    local CID = Player.PlayerData.citizenid
-    if currentRuns[CID] and not currentRuns[CID].dropOff and currentRuns[CID].type == "boosting" then
-        local place, id = GetRandomDropOff("boosting")
-
-        TriggerClientEvent('jl-laptop:client:ReturnCar', src, place)
-        ResetAnotherShit(id, "boosting")
-    elseif currentRuns[CID] and not currentRuns[CID].dropOff and currentRuns[CID].type == "vinscratch" then
-        local place, id = GetRandomDropOff("vinscratch")
-        TriggerClientEvent("jl-laptop:client:ToVinScratch", src, place)
-        ResetAnotherShit(id, "vinscratch")
-    end
-end)
-
-function RandomVIN()
-    local random = tostring(QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(3) .. QBCore.Shared.RandomInt(2)):
-        upper()
-    return random
-end
-
-function AddVin(plate)
-    MySQL.query("UPDATE player_vehicles SET vinnumber = @vin WHERE plate = @plate", {
-        ["@vin"] = RandomVIN(),
-        ["@plate"] = plate
-    })
-end
-
-exports("AddVin", AddVin)
-
--- EVERYTHING TO DO WITH STARTING THE BOOST --
-
-local function GeneratePlate() -- Just makes sure we generate plates noone owns.
-    local plate = QBCore.Shared.RandomInt(1) ..
-        QBCore.Shared.RandomStr(2) .. QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(2)
-    local result = MySQL.Sync.fetchScalar('SELECT plate FROM player_vehicles WHERE plate = ?', { plate })
-    if result or ActivePlates[plate] then
-        return GeneratePlate()
-    else
-        return plate:upper()
-    end
-end
-
-local function SpawnCar(src)
-    local Player = QBCore.Functions.GetPlayer(src)
-    local CID = Player.PlayerData.citizenid
-    local carModel = currentRuns[CID].car:lower()
-    local coords = currentRuns[CID].Location.carCoords
-    local CreateAutomobile = joaat('CREATE_AUTOMOBILE')
-    local car = Citizen.InvokeNative(CreateAutomobile, joaat(carModel), coords, true, false)
-
-    local Checks = 0
-
-    while not DoesEntityExist(car) do
-        if Checks == 10 then break end -- Incase the above native dosnt work this will then reset the contracts
-        Wait(25)
-        Checks += 1
-    end
-
-    if DoesEntityExist(car) then
-        SetVehicleDoorsLocked(car, 2)
-
-        local plate = GeneratePlate()
-        ActivePlates[plate] = true
-
-        Entity(car).state.Boosting = {
-            boostHacks = math.random(3, 10),
-            boostCooldown = false
-        }
-        if currentRuns[CID].type == "vinscratch" then
-            Entity(car).state.isvinCar = true
-        end
-        if GetResourceState('LegacyFuel') == "started" then
-            Entity(car).state.fuel = 100.0
-        else
-            TriggerClientEvent('jl-laptop:client:setvehicleFuel', src, car)
-        end
-        SetVehicleNumberPlateText(car, plate)
-        currentRuns[CID].NetID = NetworkGetNetworkIdFromEntity(car)
-        TriggerClientEvent('jl-laptop:client:MissionStarted', src, currentRuns[CID].NetID, coords, plate)
-
-        return true
-    else
-        return false
-    end
-end
-
-local function GerRandomLocation(Tier)
-    local Locations = {}
-    for i = 1, #Config.Boosting.Locations[Tier] do
-        if not Config.Boosting.Locations[Tier][i].isBusy then
-            Locations[#Locations + 1] = i
-        end
-    end
-    if Locations == 0 then return false, false end
-    local location = Locations[math.random(1, #Locations)]
-    Config.Boosting.Locations[Tier][location].isBusy = true
-    return Config.Boosting.Locations[Tier][location], location
-end
-
-local function ResetShit(Tier, location)
-    SetTimeout(5 * 60000, function()
-        Config.Boosting.Locations[Tier][location].isBusy = false
-    end)
-end
-
-QBCore.Functions.CreateCallback('jl-laptop:server:CanStartBoosting', function(source, cb, cops, id)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-
-    if not Player then return cb("error") end
-
-    local CID = Player.PlayerData.citizenid
-
-    if currentRuns[CID] then return cb("running") end
-    if not currentContracts[CID][id] then return cb("notfound") end
-    if Config.RenewedPhone and not exports['qs-crypto']:hasEnough(src, "btc", currentContracts[CID][id].cost) then
-        return cb("notenough")
-    elseif not Config.RenewedPhone and Player.PlayerData.money.crypto < currentContracts[CID][id].cost then
-        return cb("notenough")
-    end
-    local amount = 0
-    if cops == Config.Boosting.MinCops then
-        amount = 1
-    elseif cops > Config.Boosting.MinCops then
-        amount = math.floor(cops / Config.Boosting.MinCops)
-    end
-
-    if amount < 1 or #currentRuns >= amount then return cb("cops") end
-
-    local location, place = GerRandomLocation(currentContracts[CID][id].contract)
-    if location then
-        currentRuns[CID] = {
-            Location = location,
-            type = currentContracts[CID][id].type,
-            car = currentContracts[CID][id].car,
-            contract = currentContracts[CID][id].contract,
-            cost = currentContracts[CID][id].cost,
-            dropOff = nil,
-            Plate = nil,
-            NetID = nil,
-            PedSpawned = false,
-        }
-
-        if SpawnCar(src) then
-
-            if Config.RenewedPhone then
-                exports['qs-crypto']:RemoveCrypto(src, "btc", currentContracts[CID][id].cost)
-            else
-                if not
-                    Player.Functions.RemoveMoney("crypto", currentContracts[CID][id].cost,
-                        Lang:t('boosting.info.bought_boost')) then
-                    cb("busy")
-                    return
-                end
-            end
-
-
-            MaxPools[currentContracts[CID][id].contract] += 1
-            ResetShit(currentContracts[CID][id].contract, place)
-            table.remove(currentContracts[CID], id) -- has to be table.remove for some dumb ass reason
-            TriggerClientEvent('jl-laptop:client:ContractHandler', src, currentContracts[CID])
-
-            cb("success")
-        else
-            currentRuns[CID] = nil
-        end
-    else
-        cb("busy")
-    end
-
-end)
-
-
-
-
-
-
-
-
-
--- EVERYTHING TO DO WITH PEDS SPAWNING --
-local function DeletePeds(netIds)
-    SetTimeout(2.5 * 60000, function()
-        for i = 1, #netIds do
-            if DoesEntityExist(NetworkGetEntityFromNetworkId(netIds[i])) then
-                DeleteEntity(NetworkGetEntityFromNetworkId(netIds[i]))
-            end
-        end
-    end)
-end
-
-RegisterNetEvent('jl-laptop:server:SpawnPed', function()
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    local CID = Player.PlayerData.citizenid
-    if currentRuns[CID].PedSpawned then return end
-    currentRuns[CID].PedSpawned = true
-    local netIds = {}
-    for k, v in pairs(currentRuns[CID].Location.peds) do
-        local netId
-        local pedstuff = CreatePed(30, joaat(v.model), v.coords, true, false)
-        while not DoesEntityExist(pedstuff) do Wait(25) end
-        netId = NetworkGetNetworkIdFromEntity(pedstuff)
-        netIds[k] = netId
-    end
-
-    Wait(300)
-
-    TriggerClientEvent('jl-laptop:client:SpawnPeds', src, netIds, currentRuns[CID].Location)
-    DeletePeds(netIds)
-end)
-
-
-
-
-
-
-
-
-
-
--- EVERYTHING TO DO WITH BLIPS SYNCING AND CAR HACKING --
-RegisterNetEvent('jl-laptop:server:SyncBlips', function(coords, NetID)
+local function UpdateBlips()
     local car = NetworkGetEntityFromNetworkId(NetID)
-    local state = Entity(car).state.Boosting
+    local State = Entity(car).state.Boosting
+    if State and State.boostHacks then
+        CreateThread(function()
 
-    if not state then return end
+            while State and State.boostHacks > 0 do
 
-    TriggerClientEvent('jl-laptop:client:SyncBlips', -1, coords, NetID)
+                local checks = 0
+                if DoesEntityExist(car) then
+                    local pos = GetEntityCoords(car)
+                    TriggerServerEvent('jl-laptop:server:SyncBlips', pos, NetID)
+                else
+                    checks = checks + 1
+                    if checks >= 3 and not DoesEntityExist(car) then
+                        TriggerServerEvent('jl-laptop:server:CancelBoost', NetID, Plate)
+                    end -- additional safety check JUST incase, make a cancel events cancelling everything
+                end
+
+
+                Wait((Config.Boosting.Frequency * 1000) / State.boostHacks) -- Max 10 seconds, the more times hacked the less time it updates
+                State = Entity(car).state.Boosting -- Makes it so that it dosnt get the state from the car twice on first run
+            end
+
+            if DoesEntityExist(car) then
+                TriggerServerEvent('jl-laptop:server:SyncBlips', nil, NetID)
+                Notify(Lang:t("boosting.success.disable_tracker"), 'success', 7500)
+                DelayDelivery()
+            end
+        end)
+    end
+end
+
+local function CheckVin(NetworkID)
+    if IsCheckingVin then return end
+    IsCheckingVin = true
+    local entity = NetworkGetEntityFromNetworkId(NetworkID)
+    if DoesEntityExist(entity) then
+        QBCore.Functions.Progressbar('checking_vin', 'Checking VIN', 10000, false, true,
+            { -- Name | Label | Time | useWhileDead | canCancel
+                disableMovement = true,
+                disableCarMovement = true,
+                disableMouse = false,
+                disableCombat = true,
+            }, {
+                animDict = '"anim@amb@clubhouse@tutorial@bkr_tut_ig3@"@',
+                anim = 'machinic_loop_mechandplayer',
+                flags = 1,
+            }, {}, {}, function() -- Play When Done
+                local reply
+
+                if not Entity(entity).state.vinchecked then
+                    local res = promise:new()
+                    QBCore.Functions.TriggerCallback('jl-laptop:server:checkVin', function(cb)
+                        res:resolve(cb)
+                    end, NetworkID)
+                    reply = Citizen.Await(res)
+                else
+                    reply = Entity(entity).state.vinchecked.reply
+                end
+                Wait(100)
+                if reply == "failed" then
+                    QBCore.Functions.Notify("The vin number is " ..
+                        Entity(entity).state.vinchecked.vinnumber)
+                elseif reply == "found" then
+                    QBCore.Functions.Notify("The vin number is scratched!", "error")
+                end
+                IsCheckingVin = false
+                ClearPedTasks(PlayerPedId())
+            end, function() -- Play When Cancel
+            ClearPedTasks(PlayerPedId())
+            IsCheckingVin = false
+        end)
+    end
+end
+
+local AntiSpam = false -- Just a true / false boolean to not spam the shit out of the server.
+local carCoords = nil
+-- sends information from server to client that we found the car and we started lockpicking
+RegisterNetEvent('lockpicks:UseLockpick', function()
+    if AntiSpam then return end
+    if not NetID then return end
+    local car = NetworkGetEntityFromNetworkId(NetID)
+    if DoesEntityExist(car) then
+        local dist = #(GetEntityCoords(car) - GetEntityCoords(PlayerPedId()))
+        if dist <= 3.5 then -- 2.5 is the distance in qbcore vehiclekeys if you use more or less then please edit this.
+            if #(vector3(carCoords.x, carCoords.y, carCoords.z) - GetEntityCoords(car)) <= 6.9 then
+                AntiSpam = true
+                TriggerServerEvent('jl-laptop:server:SpawnPed')
+                RemoveBlip(missionBlip)
+                UpdateBlips()
+                SendNUIMessage({
+                    action = "boosting/setcancel",
+                    data = {
+                        status = false
+                    }
+                })
+                exports['ps-dispatch']:CarBoosting(vehicle)
+            else
+                TriggerServerEvent('jl-laptop:server:CancelBoost', NetID, Plate)
+            end
+        end
+    end
 end)
 
--- ** Hacking Cars ** --
-local function removeCooldown(car, time)
-    SetTimeout(time * 1000, function()
-        local state = Entity(car).state.Boosting
-        local newState = {
-            boostHacks = state.boostHacks,
-            boostCooldown = false,
-        }
-        Entity(car).state:set('Boosting', newState, true)
+-- MISSION STARTER --
+
+-- Sends information from server to client that it will start now
+
+RegisterNetEvent('jl-laptop:client:MissionStarted',
+    function(netID, coords, plate) -- Pretty much just resets every boolean to make sure no issues will occour.
+        NetID = netID
+        carCoords = coords
+        AntiSpam = false
+        inZone = false
+
+        -- send plate number
+        SendNUIMessage({
+            action = "boosting/horseboosting",
+            data = {
+                plate = plate or "Unknown?"
+            }
+        })
+        --print(coords)
+
+        if PZone then PZone:destroy() PZone = nil end
+
+        if missionBlip then RemoveBlip(missionBlip) end
+
+        if coords then
+            if Config.Boosting.Debug then SetNewWaypoint(coords.x, coords.y) end
+
+            missionBlip = AddBlipForRadius(coords.x + math.random(-100, 100), coords.y + math.random(-100, 100), coords.z
+                , 250.0)
+            SetBlipAlpha(missionBlip, 150)
+            SetBlipHighDetail(missionBlip, true)
+            SetBlipColour(missionBlip, 1)
+            SetBlipAsShortRange(missionBlip, true)
+        end
+    end)
+
+RegisterNUICallback('boosting/start', function(data, cb)
+    QBCore.Functions.TriggerCallback('jl-laptop:server:CanStartBoosting', function(result)
+        print(result)
+        if result == "success" then
+            --TriggerServerEvent('jl-laptop:server:StartBoosting', data.id, currentCops)
+            cb({
+                status = 'success',
+                message = Lang:t('boosting.laptop.boosting.success')
+            })
+        elseif result == "cops" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.cops')
+            })
+        elseif result == "running" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.running')
+            })
+        elseif result == "notfound" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.notfound')
+            })
+        elseif result == "notenough" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.notenough')
+            })
+        elseif result == "busy" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.busy')
+            })
+        elseif result == "error" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.boosting.error')
+            })
+        end
+    end, currentCops, data.id)
+end)
+
+
+
+
+
+
+
+
+-- DELIVERING VEHICLE --
+local function DeliverCar()
+    Notify(Lang:t('boosting.error.get_away'), 'error', 7500)
+    local car = NetworkGetEntityFromNetworkId(NetID)
+    FreezeEntityPosition(car, true)
+    SetVehicleDoorsLocked(car, 2)
+    if PZone then
+        PZone:destroy()
+        PZone = nil
+    end
+
+    Wait(7500)
+    Notify(Lang:t('boosting.success.youllbepaid'), 'success', 7500)
+    while #QBCore.Functions.GetPlayersFromCoords(GetEntityCoords(car), 100.0) > 0 do
+        Wait(7500)
+    end
+    TriggerServerEvent('jl-laptop:server:finishBoost', NetID)
+    RemoveBlip(dropoffBlip)
+end
+
+local function StartVin()
+    QBCore.Functions.Progressbar('vin_scratching', 'Scratching VIN', 7000, false, true,
+        { -- Name | Label | Time | useWhileDead | canCancel
+            disableMovement = true,
+            disableCarMovement = true,
+            disableMouse = false,
+            disableCombat = true,
+        }, {
+            animDict = '"anim@amb@clubhouse@tutorial@bkr_tut_ig3@"@',
+            anim = 'machinic_loop_mechandplayer',
+            flags = 1,
+        }, {}, {}, function() -- Play When Done
+            local car = NetworkGetEntityFromNetworkId(NetID)
+            local model = GetDisplayNameFromVehicleModel(GetEntityModel(car)):lower()
+            local mods = QBCore.Functions.GetVehicleProperties(car)
+            TriggerServerEvent("jl-laptop:server:fuckvin", NetID, model, mods)
+            TriggerServerEvent('jl-laptop:server:finishBoost', NetID, true)
+            Entity(car).state.isvinCar = false
+            exports['qb-target']:RemoveTargetEntity(car, "Scratch Vin")
+            ClearPedTasks(PlayerPedId())
+        end, function() -- Play When Cancel
+        ClearPedTasks(PlayerPedId())
     end)
 end
 
-function log(text)
-    print(json.encode(text, { pretty = true, indent = true, align_keys = true }))
-end
+local function MeVinYeah()
+    local car = NetworkGetEntityFromNetworkId(NetID)
+    if not DoesEntityExist(car) then return end
 
-RegisterNetEvent('jl-laptop:server:SyncPlates', function(success)
-    local src = source
-
-    local Player = QBCore.Functions.GetPlayer(src)
-
-    local randomSeconds = math.random(Config.Boosting.HackDelayMin, Config.Boosting.HackDelayMax)
-
-    if not Player then log("Player not found") return end
-    if not Player.Functions.GetItemByName(Config.Boosting.HackingDevice) then log("Hacking item not found") return end
-
-    local ped = GetPlayerPed(src)
-    local car = GetVehiclePedIsIn(ped, false)
-    local state = Entity(car).state.Boosting
-
-    if not state then log("Hacking State is nil") return end
-    if state.boostCooldown then log("state is on Cooldown") return end
-    if state.boostHacks <= 0 then log("Boosthacks is 0 or less") return end
-
-    if success then
-        if state.boostHacks - 1 >= 1 then
-            Notify(src, Lang:t('boosting.success.tracker_off', { tracker_left = newThing, time = randomSeconds }),
-                'success', 7500)
-        end
-
-        local newAmount = Config.Boosting.Debug and 0 or state.boostHacks - 1
-        local doCD = Config.Boosting.Debug and false or true
-
-        local NewTable = {
-            boostHacks = newAmount,
-            boostCooldown = doCD,
-        }
-
-        Entity(car).state:set('Boosting', NewTable, true)
-
-        if not Config.Boosting.Debug then removeCooldown(car, randomSeconds) end
-
-        log(("Hacking was successfull %s hacks left"):format(Entity(car).state.Boosting.boostHacks))
+    local state = Entity(car).state
+    if state.isvinCar then
+        exports['qb-target']:AddTargetEntity(car, {
+            options = {
+                {
+                    action = function()
+                        StartVin()
+                    end,
+                    canInteract = function()
+                        return inVin and state.isvinCar
+                    end,
+                    label = "Scratch Vin",
+                    icon = "fas fa-mask"
+                },
+            },
+            distance = 2.0
+        })
     else
-        log("Failed the hacking")
-        Notify(src, Lang:t('boosting.error.disable_fail'), 'success', 7500)
-        if Player and Player.Functions.RemoveItem(Config.Boosting.HackingDevice, 1) then
-            TriggerClientEvent("inventory:client:ItemBox", src, QBCore.Shared.Items[Config.Boosting.HackingDevice],
-                "remove")
-        end
-    end
-end)
-
-QBCore.Functions.CreateUseableItem(Config.Boosting.HackingDevice, function(source, _)
-    local Player = QBCore.Functions.GetPlayer(source)
-    if Player.Functions.GetItemByName(Config.Boosting.HackingDevice) then
-        TriggerClientEvent('jl-laptop:client:HackCar', source)
-    end
-end)
-
------ ** EVERYTHING TO DO QUEUE ** -----
-
-QBCore.Functions.CreateCallback('jl-laptop:server:joinQueue', function(source, cb, status)
-    print(status)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    if not Player then return cb("error") end
-    if not HasAppAccess(src, "boosting") then return cb("error") end
-    local CID = Player.PlayerData.citizenid
-    if status then
-        if LookingForContracts[CID] and LookingForContracts[CID].active and LookingForContracts[CID].online and
-            LookingForContracts[CID].src == src then return cb("inqueue") end
-        if currentRuns[CID] then return cb("running") end
-        if not LookingForContracts[CID] then LookingForContracts[CID] = {} end
-        if not currentContracts[CID] then currentContracts[CID] = {} end
-        if LookingForContracts[CID] and LookingForContracts[CID].skipped then
-            LookingForContracts[CID] = {
-                src = src,
-                skipped = LookingForContracts[CID].skipped,
-                online = true,
-                active = true
-            }
-        else
-            LookingForContracts[CID] = {
-                src = src,
-                online = true,
-                skipped = 0,
-                active = true
-            }
-        end
-        cb("success")
-    else
-        if not LookingForContracts[CID] then return cb("error") end
-        LookingForContracts[CID].active = false
-        LookingForContracts[CID].online = true
-        cb("success")
-    end
-
-    if LookingForContracts[CID].online then
-        TriggerClientEvent('jl-laptop:client:QueueHandler', src, LookingForContracts[CID].active)
-    end
-end)
-
-
-RegisterNetEvent('jl-laptop:server:QuitQueue', function(source)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    if not Player then return end
-    local CID = Player.PlayerData.citizenid
-    if not LookingForContracts[CID] or not LookingForContracts[CID].skipped then return end
-    LookingForContracts[CID].active = false
-
-    if LookingForContracts[CID].online then
-        TriggerClientEvent('jl-laptop:client:QueueHandler', src, LookingForContracts[CID].active)
-    end
-end)
-
-
--- ** EVERYTHING TO DO WITH REWARDS ** --
-
-RegisterNetEvent('jl-laptop:server:fuckvin', function(netid, model, mods)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    local entity = NetworkGetEntityFromNetworkId(netid)
-    local plate = GetVehicleNumberPlateText(entity)
-    MySQL.insert.await("INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, state, vinscratch, vinnumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        , {
-        Player.PlayerData.license,
-        Player.PlayerData.citizenid,
-        model,
-        entity,
-        json.encode(mods),
-        plate,
-        0,
-        1,
-        RandomVIN()
-    })
-    TriggerClientEvent('vehiclekeys:client:SetOwner', src, plate)
-end)
-
-RegisterNetEvent('jl-laptop:server:finishBoost', function(netId, isvin)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    local CID = Player.PlayerData.citizenid
-
-    if not currentRuns[CID] then return end
-    if not (currentRuns[CID].NetID == netId) then return end
-
-    local boostData = Player.PlayerData.metadata["carboostrep"] or 0
-    boostData += math.random(Config.Boosting.MetaReward[currentRuns[CID].contract].min,
-        Config.Boosting.MetaReward[currentRuns[CID].contract].max)
-    Player.Functions.SetMetaData('carboostrep', boostData)
-    if not isvin then
-        if currentRuns[CID].cost == 0 then
-            currentRuns[CID].cost = math.random(1, 2) -- makes it so they can actually get btc when the boost is Free
-        end
-        local reward = math.ceil(currentRuns[CID].cost * math.random(2, 3))
-        if Config.RenewedPhone then
-            exports['qs-crypto']:AddCrypto(src, "btc", reward)
-        else
-            Player.Functions.AddMoney("crypto", reward, Lang:t('boosting.info.rewardboost'))
-        end
-        Notify(src, Lang:t('boosting.success.received_reward', { reward = reward }), "success", 7500)
-        if DoesEntityExist(NetworkGetEntityFromNetworkId(currentRuns[CID].NetID)) then
-            DeleteEntity(NetworkGetEntityFromNetworkId(currentRuns[CID].NetID))
-        end
-    end
-    currentRuns[CID] = nil
-    TriggerClientEvent('jl-laptop:client:finishContract', src, currentContracts[CID])
-end)
-
-
-
-
-
-
-
--- ** EVERYTHING TO DO WITH CANCELLING ** --
-RegisterNetEvent('jl-laptop:server:CancelBoost', function(netId, Plate, b)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    local CID = Player.PlayerData.citizenid
-    if not Plate then
-        Plate = GetVehicleNumberPlateText(NetworkGetEntityFromNetworkId(netId))
-    end
-    if not currentRuns[CID] then return end
-    if not (currentRuns[CID].NetID == netId) then return end
-
-    if b then
-        if DoesEntityExist(NetworkGetEntityFromNetworkId(currentRuns[CID].NetID)) then
-            DeleteEntity(NetworkGetEntityFromNetworkId(netId))
-        end
-    else
-        if DoesEntityExist(NetworkGetEntityFromNetworkId(currentRuns[CID].NetID)) then return end
-    end
-
-    ActivePlates[Plate] = nil
-    currentRuns[CID] = nil
-    TriggerClientEvent('jl-laptop:client:finishContract', src, currentContracts[CID])
-
-    Notify(src, Lang:t('boosting.error.cancelboost'), "error", 7500)
-end)
-
-
-
--- ** CONTRACTS ** --
-RegisterNetEvent('jl-laptop:server:DeclineBoost', function(contract)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    if not Player then return end
-
-    local CID = Player.PlayerData.citizenid
-    if not currentContracts[CID] then return end
-    if not currentContracts[CID][contract] then return end
-
-    MaxPools[currentContracts[CID][contract].contract] += 1
-    table.remove(currentContracts[CID], contract)
-end)
-
-QBCore.Functions.CreateCallback('jl-laptop:server:DeclineContract', function(source, cb, contract)
-    local src = source
-    local Player = QBCore.Functions.GetPlayer(src)
-    if not Player then return cb("error") end
-
-    if not contract then return cb("error") end
-    local CID = Player.PlayerData.citizenid
-    if not currentContracts[CID] then return cb("error") end
-    if not currentContracts[CID][contract] then return cb("error") end
-
-    MaxPools[currentContracts[CID][contract].contract] += 1
-    table.remove(currentContracts[CID], contract)
-
-    TriggerClientEvent('jl-laptop:client:ContractHandler', src, currentContracts[CID])
-    cb("success")
-end)
-
-QBCore.Functions.CreateCallback('jl-laptop:server:checkVin', function(_, cb, NetID)
-    local entity = NetworkGetEntityFromNetworkId(NetID)
-
-    if not NetID or not entity then return end
-    if not DoesEntityExist(entity) then return end
-    local plate = GetVehicleNumberPlateText(entity)
-    local result = MySQL.query.await('SELECT vinnumber FROM player_vehicles WHERE plate = ? AND vinscratch = 1',
-        { plate })
-
-    local vinTable = {
-        reply = "found",
-    }
-    if result[1] then
-        local chance = math.random(1, 100)
-        if chance >= 20 then
-            vinTable = {
-                reply = "failed",
-                vinnumber = result[1].vinnumber
-            }
-        end
-    else
-        vinTable = {
-            reply = "failed",
-            vinnumber = RandomVIN()
-        }
-    end
-
-    Entity(entity).state.vinchecked = vinTable
-    return cb(vinTable.reply)
-end)
-
-
-
-
-
-
--- ** TRANSFER BOOSTS ** --
-
-QBCore.Functions.CreateCallback('jl-laptop:server:TransferContracts', function(source, cb, playerID, contractID)
-    local src = source
-
-    if src == tonumber(playerID) then return cb("self") end
-
-    if not HasAppAccess(src, "boosting") then return cb("error") end
-
-    if not playerID or not contractID then return cb("notfound") end
-
-    local Player = QBCore.Functions.GetPlayer(source)
-    if not Player then return cb("error") end
-
-    local CID = Player.PlayerData.citizenid
-    local Contract = currentContracts[CID][contractID]
-    if not Contract then return cb("error") end
-
-    local Reciever = QBCore.Functions.GetPlayer(tonumber(playerID))
-    if not Reciever then return cb("notfound") end
-    local RecieveCID = Reciever.PlayerData.citizenid
-    print(RecieveCID, Reciever.PlayerData.source)
-    if not currentContracts[RecieveCID] then currentContracts[RecieveCID] = {} end
-    if #currentContracts[RecieveCID] + 1 > Config.Boosting.MaxBoosts then return cb("full") end
-
-    -- refreshes the contracts for the source --
-    table.remove(currentContracts[CID], contractID) -- has to be table.remove for some dumb ass reason
-    TriggerClientEvent('jl-laptop:client:ContractHandler', src, currentContracts[CID])
-    -- refreshes the contracts for the reciever --
-    currentContracts[RecieveCID][#currentContracts[RecieveCID] + 1] = Contract
-    TriggerClientEvent('jl-laptop:client:ContractHandler', Reciever.PlayerData.source, currentContracts[RecieveCID])
-    cb("success")
-end)
-
-
-
-
-
-
-
-
-QBCore.Functions.CreateCallback('jl-laptop:server:GetContracts', function(source, cb)
-    local Player = QBCore.Functions.GetPlayer(source)
-    local CID = Player.PlayerData.citizenid
-    if not currentContracts[CID] then currentContracts[CID] = {} end
-
-    cb(currentContracts[CID])
-end)
-
-
-
-
-
-
-
-
-
-
--- ** EVERYTHING TO DO WITH GENERATING CONTRACTS ** --
-local function generateTier(boostData)
-    local chance = math.random(1, 100)
-    local tier
-    if not boostData then return end
-    -- We should also get their current metadata and based on their metadata increase this luck or even cap it so they cant get s+ if they just startedt/
-    if chance >= 99 then -- 2%
-        if boostData >= Config.Boosting.TiersPerRep["S"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "S+"
-        else
-            generateTier(src)
-        end
-    elseif chance >= 95 then -- 3%
-        if boostData >= Config.Boosting.TiersPerRep["A+"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "S"
-        else
-            generateTier(src)
-        end
-
-    elseif chance >= 90 then -- 5%
-        if boostData >= Config.Boosting.TiersPerRep["A"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "A+"
-        else
-            generateTier(src)
-        end
-
-    elseif chance >= 80 then -- 10%
-        if boostData >= Config.Boosting.TiersPerRep["B"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "A"
-        else
-            generateTier(src)
-        end
-
-    elseif chance >= 60 then -- 20%
-        if boostData >= Config.Boosting.TiersPerRep["C"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "B"
-        else
-            generateTier(src)
-        end
-    elseif chance >= 35 then -- 25%
-        if boostData >= Config.Boosting.TiersPerRep["D"] then -- You can jump 1 tier above the current tier you are at so someone at D can't get a S+ Contract
-            tier = "C"
-        else
-            generateTier(src)
-        end
-    else -- 35%
-        tier = "D"
-    end
-
-    Wait(0)
-
-    if not tier then return generateTier(src) end
-
-    if MaxPools[tier] and MaxPools[tier] > 0 then
-        MaxPools[tier] -= 1
-        return tier
-    else
-        return nil
+        TriggerServerEvent('jl-laptop:server:finishBoost', NetID, true)
     end
 end
 
-local function generateCar(tier)
-    if not cars[tier] or (cars[tier] and #cars[tier] < 1) then return nil end
-    return cars[tier][math.random(1, #cars[tier])]
-end
+local function VehicleCheck(isvin)
+    CreateThread(function()
+        local inCar = false
+        while inZone do
+            local ped = PlayerPedId()
+            if IsPedInAnyVehicle(ped, false) then
+                inCar = true
+            end
 
-local function missionType(boostData, tier)
-
-    if not boostData then return end
-
-    if not tier then return end
-
-    if tier == "D" or tier == "C" or tier == "B" or tier == "A" then return "boosting" end -- Only A+, S and S+ Can be vinscratched
-
-    print(tier)
-
-    if boostData >= Config.Boosting.TiersPerRep[tier] then
-        -- if math.random() <= 0.05 then
-        return "vinscratch"
-        -- end
-    else
-        return "boosting"
-    end
-end
-
-function GetHoursFromNow(hours)
-    if Config.Linux then
-        return os.date("!%Y-%m-%dT%TZ", os.time() + hours * 60 * 60)
-    else
-        return os.date("!%Y-%m-%dT%SZ", os.time() + hours * 60 * 60)
-    end
-end
-
-function GetCurrentTime()
-    if Config.Linux then
-        return os.date("!%Y-%m-%dT%TZ", os.time())
-    else
-        return os.date("!%Y-%m-%dT%SZ", os.time())
-    end
-
-end
-
-QBCore.Functions.CreateCallback("jl-laptop:server:getCurrentTime", function(cb)
-    cb({
-        GetCurrentTime()
-    })
-end)
-
-local function generateName()
-    return Config.Boosting.RandomNames[math.random(1, #Config.Boosting.RandomNames)]
-end
-
-local function calcPrice(tier, type)
-    if not tier or not type then return end
-    local price = math.random(Config.Boosting.Price[tier].min, Config.Boosting.Price[tier].max)
-    if type == "boosting" then price = price else price = price * math.random(2, 5) end
-    return Config.Boosting.Debug and 0 or price
-end
-
-local function generateContract(src, contract, vehicle, mission)
-    local Player = QBCore.Functions.GetPlayer(src)
-    if not Player then return end
-    local CID = Player.PlayerData.citizenid
-    local boostData = Player.PlayerData.metadata["carboostrep"] or 0
-    if not currentContracts[CID] then currentContracts[CID] = {} end
-
-    contract = contract or generateTier(boostData)
-    vehicle = vehicle or generateCar(contract)
-    mission = mission or missionType(boostData, contract)
-
-    if contract and vehicle and mission then
-        currentContracts[CID][#currentContracts[CID] + 1] = {
-            id = #currentContracts[CID] + 1,
-            contract = contract,
-            car = vehicle,
-            carName = QBCore.Shared.Vehicles[vehicle]["name"],
-            expire = GetHoursFromNow(6),
-            owner = generateName(),
-            type = mission,
-            cost = calcPrice(contract, mission),
-        }
-        LookingForContracts[CID].skipped = 0
-        TriggerClientEvent('jl-laptop:client:ContractHandler', src, currentContracts[CID], GetCurrentTime())
-    else
-        LookingForContracts[CID].skipped += 1
-    end
-end
-
--- QUEUE LOOP --
-CreateThread(function()
-    while true do
-        if LookingForContracts then
-            for k, v in pairs(LookingForContracts) do
-                if currentContracts[k] then
-                    if #currentContracts[k] < Config.Boosting.MaxBoosts and v.active and v.online then
-                        local ContractChance = math.random()
-                        if Config.Boosting.Debug then
-                            print(v.skipped)
-                        end
-                        -- If skipped is bigger or equal to 25 we give player a contract for waiting
-                        -- Otherwise we say if they been in queue longer than 2-7 skips and their chance is higher than 0.75 (meaning 25% chance) we will reward them with a contract
-                        if v.skipped >= 25 or (v.skipped >= math.random(2, 7) and ContractChance >= 0.75) then
-                            generateContract(v.src)
+            if inCar and not IsPedInAnyVehicle(ped, false) then
+                local veh = GetVehiclePedIsIn(ped, true)
+                if veh == NetworkGetEntityFromNetworkId(NetID) then
+                    if not GetIsVehicleEngineRunning(veh) then
+                        if isvin then
+                            inZone = false
+                            MeVinYeah()
                         else
-                            v.skipped += 1
-                        end
-                    elseif #currentContracts[k] >= Config.Boosting.MaxBoosts then
-                        v.active = false
-                        if v.online then
-                            TriggerClientEvent('jl-laptop:client:QueueHandler', v.src, false)
+                            inZone = false
+                            DeliverCar()
                         end
                     end
-                elseif not currentContracts[k] then
-                    currentContracts[k] = {}
                 end
             end
+            Wait(100)
         end
-        Wait(Config.Boosting.Debug and 200 or (math.random(1, 4) * 60000)) -- Once every 1 to 4 minutes
-    end
-end)
-
-
--- Player dropped functions --
-local function GetCID(src)
-    if LookingForContracts then
-        for k, v in pairs(LookingForContracts) do
-            if v.src == src then
-                return k
-            end
-        end
-    end
+    end)
 end
 
-AddEventHandler('playerDropped', function()
-    local src = source
-    local CID = GetCID(src)
-    if not CID then return end
-    LookingForContracts[CID].active = false
-    LookingForContracts[CID].online = false
+RegisterNetEvent('jl-laptop:client:ReturnCar', function(coords)
+    PZone = CircleZone:Create(coords, 15, {
+        name = "NewReturnWhoDis",
+        debugPoly = Config.Boosting.Debug,
+    })
 
-    if currentRuns[CID] then
-        currentRuns[CID] = nil
+    local info = {
+        ['blip'] = {
+            ['Text'] = Lang:t('boosting.blip.dropoff'),
+            ['Coords'] = coords
+        },
+    }
+
+    PZone:onPlayerInOut(function(isPointInside)
+        if isPointInside then
+            inZone = true
+            VehicleCheck()
+        else
+            inZone = false
+        end
+    end)
+
+    Notify(Lang:t('boosting.success.gps_dropoff'), 'success', 7500)
+
+    dropoffBlip = AddBlipForCoord(info['blip'].Coords.x, info['blip'].Coords.y, info['blip'].Coords.z)
+    SetBlipSprite(dropoffBlip, 326)
+    SetBlipScale(dropoffBlip, 1.0)
+    SetBlipColour(dropoffBlip, 40)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentString(info['blip'].Text)
+    EndTextCommandSetBlipName(dropoffBlip)
+    SetBlipFlashTimer(dropoffBlip, 5000)
+end)
+
+RegisterNetEvent("jl-laptop:client:ToVinScratch", function(coords)
+    PZone = CircleZone:Create(coords, 15, {
+        name = "VinGoesBrum",
+        debugPoly = Config.Boosting.Debug
+    })
+    local info = {
+        blip = {
+            text = Lang:t('boosting.blip.vinscratch'),
+            coords = coords
+        }
+    }
+    PZone:onPlayerInOut(function(isPointInside)
+        if isPointInside then
+            inZone = true
+            inVin = true
+            VehicleCheck(true)
+        else
+            inVin = false
+            inZone = false
+        end
+    end)
+    Notify(Lang:t('boosting.success.vin_dropoff'), "success", 7000)
+    dropoffBlip = AddBlipForCoord(info.blip.coords.x, info.blip.coords.y, info.blip.coords.z)
+    SetBlipSprite(dropoffBlip, 326)
+    SetBlipScale(dropoffBlip, 1.0)
+    SetBlipColour(dropoffBlip, 40)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentString(info.blip.text)
+    EndTextCommandSetBlipName(dropoffBlip)
+    SetBlipFlashTimer(dropoffBlip, 5000)
+end)
+
+-- Just a netevent that retracts all the booleans and properly resets the client --
+RegisterNetEvent('jl-laptop:client:finishContract', function(table)
+    if PZone then PZone:destroy() PZone = nil end
+    if PZone2 then PZone2:destroy() PZone2 = nil end
+    NetID = nil
+    if missionBlip then RemoveBlip(missionBlip) missionBlip = nil end
+    if dropoffBlip then RemoveBlip(dropoffBlip) dropoffBlip = nil end
+    inZone = false
+
+    Contracts = table
+
+    SendNUIMessage({ action = 'booting/delivered' })
+end)
+
+
+-- ** HACKING THE VEHICLE ** --
+local psUI = {
+    "numeric",
+    "alphabet",
+    "alphanumeric",
+    "greek",
+    "braille",
+    "runes"
+}
+
+local currentHacking = false
+
+RegisterNetEvent('jl-laptop:client:HackCar', function()
+    -- Makes it so if they are doing hacking or whatever it will not let them do it again, as people could hard spam before the delay was added --
+    if currentHacking then return end
+    currentHacking = true
+    local ped = PlayerPedId()
+    if haveItem(Config.Boosting.HackingDevice) then
+        if IsPedInAnyVehicle(ped, false) then
+            local car = GetVehiclePedIsIn(ped, false)
+            local State = Entity(car).state.Boosting
+            if State and State.boostHacks > 0 and not State.boostCooldown then
+                local pushingP = promise.new()
+                exports['ps-ui']:Scrambler(function(cb)
+                    pushingP:resolve(cb)
+                end, psUI[math.random(1, #psUI)], 30, 0)
+                local success = Citizen.Await(pushingP)
+
+                TriggerServerEvent('jl-laptop:server:SyncPlates', success)
+                currentHacking = false
+            else
+                Notify(Lang:t("boosting.error.no_tracker"), 'error', 7500)
+                currentHacking = false
+            end
+        else
+            currentHacking = false
+        end
+    else
+        currentHacking = false
     end
 end)
 
--- Commands --
-QBCore.Commands.Add('giveboost', Lang:t('boosting.command.command_desc'),
-    { { name = Lang:t('boosting.command.command_name_ID'), help = Lang:t('boosting.command.command_help_ID') },
-        { name = Lang:t('boosting.command.command_name_tier'), help = Lang:t('boosting.command.command_help_tier') },
-        { name = Lang:t('boosting.command.command_name_vehicle'), help = Lang:t('boosting.command.command_help_vehicle') },
-        { name = 'Type', help = 'boosting/vinscratch' }, }, false, function(source, args)
-        if args and type(tonumber(args[1])) == "number" then
-            local Player = QBCore.Functions.GetPlayer(tonumber(args[1]))
-            if Player then
-                local CID = Player.PlayerData.citizenid
-                if LookingForContracts[CID] then
-                    if args[4] and not (args[4] == 'boosting' or args[4] == 'vinscratch') then
-                        TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.incorrect_type'), 'error',
-                            7500)
-                    elseif args[3] and not type(args[3]) == "string" then
-                        TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.incorrect_vehicle'), 'error'
-                            , 7500)
-                    elseif args[2] and
-                        not
-                        (
-                        args[2] == "D" or args[2] == "C" or args[2] == "B" or args[2] == "A" or args[2] == "A+" or
-                            args[2] == "S" or args[2] == "S+") then
-                        TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.incorrect_tier'), 'error',
-                            7500)
-                    else
-                        generateContract(tonumber(args[1]), args[2], args[3], args[4])
-                        TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.created'), 'success', 7500)
-                    end
-                else
-                    TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.not_inqueue'), 'error', 5000)
-                end
-            else
-                TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.player_offline'), 'error', 5000)
-            end
-        else
-            TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.incorrect_format'), "error", 5000)
-        end
-    end, "god")
 
-QBCore.Commands.Add('settier', Lang:t('boosting.command.command_tier_desc'),
-    { { name = Lang:t('boosting.command.command_name_ID'), help = Lang:t('boosting.command.command_help_ID') },
-        { name = Lang:t('boosting.command.command_name_tier'), help = Lang:t('boosting.command.command_help_tier') } },
-    false, function(source, args)
-        if args and type(tonumber(args[1])) == "number" then
-            if args[2] and type(args[2]) == "string" then
-                local Player = QBCore.Functions.GetPlayer(tonumber(args[1]))
-                if Player then
-                    local rep = Player.PlayerData.metadata["carboostrep"] or 0
-                    rep = Config.Boosting.TiersPerRep[args[2]]
-                    Player.Functions.SetMetaData('carboostrep', rep)
-                else
-                    TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.player_offline'), 'error', 5000)
-                end
-            else
-                TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.missingarg'), "error", 5000)
-            end
-        else
-            TriggerClientEvent('QBCore:Notify', source, Lang:t('boosting.command.incorrect_format'), "error", 5000)
-        end
-    end, "god")
+if Config.Boosting.Debug then
+    RegisterCommand('hackcar', function()
+        if not Config.Boosting.Debug then return end
+
+        TriggerEvent('jl-laptop:client:HackCar')
+    end, false)
+end
 
 
-AddEventHandler("onServerResourceStart", function(resname)
-    if resname == GetCurrentResourceName() then
-        local success, result = pcall(MySQL.query.await, "SELECT * FROM player_vehicles WHERE vinnumber IS NULL")
-        if success and result[1] then
-            local queries = {}
-            for i = 1, #result do
-                local row = result[i]
-                queries[#queries + 1] = {
-                    query = 'UPDATE player_vehicles SET vinnumber = @vin WHERE id = @id', parameters = {
-                        ["@id"] = row.id,
-                        ["@vin"] = RandomVIN()
-                    }
-                }
-            end
-            if queries[1] then
-                MySQL.transaction(queries)
-            end
-        end
+
+
+
+-- ** EVERYTHING TO DO WITH PEDS ATTACKING YOU ** --
+
+-- Gets the ped from the server side and then gives them tasks and weapons on the client side.
+RegisterNetEvent('jl-laptop:client:SpawnPeds', function(netIds, Location)
+    for i = 1, #netIds do
+        -- Get the Ped --
+        local APed = NetworkGetEntityFromNetworkId(netIds[i])
+
+        -- health and armor --
+        SetEntityMaxHealth(APed, Location.peds[i].health)
+        SetEntityHealth(APed, Location.peds[i].health)
+        SetPedArmour(APed, Location.peds[i].armor)
+
+        -- Relationship --
+        SetPedAsCop(APed, true)
+        SetPedRelationshipGroupHash(APed, joaat("HATES_PLAYER"))
+
+        -- Weapon Stuff --
+        GiveWeaponToPed(APed, joaat(Location.peds[i].weapon), 250, false, true)
+
+        -- combat stuff --
+        SetCanAttackFriendly(APed, false, true)
+        SetPedCombatMovement(APed, 3)
+        SetPedCombatRange(APed, 2)
+        SetPedCombatAttributes(APed, 46, true)
+        SetPedCombatAttributes(APed, 0, false)
+        SetPedAccuracy(APed, 60)
+        SetPedCombatAbility(APed, 100)
+        TaskCombatPed(APed, PlayerPedId(), 0, 16)
+        SetPedKeepTask(APed, true)
+        SetPedSeeingRange(APed, 150.0)
+        SetPedHearingRange(APed, 150.0)
+        SetPedAlertness(APed, 3)
+
+
+        -- other shit --
+        SetPedDropsWeaponsWhenDead(APed, false)
+        SetPedFleeAttributes(APed, 0, 0)
+        TaskGoStraightToCoord(APed, Location.carCoords.x, Location.carCoords.y, Location.carCoords.z, 1, -1, 0.0, 0.0)
     end
+end)
+
+
+---- ALL THE BLIP SYNCS ----
+local blips = {} -- Stores all the blips in a table so that PD can see multiple blips at the same time
+
+-- The event that does everything for the blips, checks if the client is police then checks if the blip is active and if it is then remove it and spawn a new
+RegisterNetEvent('jl-laptop:client:SyncBlips', function(coords, newNet)
+    if not Config.Boosting.Debug and not isPolice() then print("Not police") return end
+    print(coords, newNet)
+    if blips[newNet] then RemoveBlip(blips[newNet]) end
+
+    if coords then
+        blips[newNet] = AddBlipForRadius(coords.x + math.random(-5, 5), coords.y + math.random(-5, 5), coords.z, 35.0)
+        SetBlipHighDetail(blips[newNet], true)
+        SetBlipColour(blips[newNet], 1)
+        SetBlipAsShortRange(blips[newNet], true)
+    end
+end)
+
+
+
+
+
+
+
+-- ** CONTRACT HANDLER ** --
+
+-- Sends the information to client when their contracts update
+RegisterNetEvent('jl-laptop:client:ContractHandler', function(table, currentdate)
+    if not table then return end
+    Contracts = table
+    if not display then return end
+
+    SendNUIMessage({
+        action = 'receivecontracts',
+        contracts = table,
+        serverdate = currentdate
+    })
+end)
+
+-- Handles state right when the player selects their character and location.
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    QBCore.Functions.TriggerCallback('jl-laptop:server:GetContracts', function(result)
+        Contracts = result
+        if Contracts and #Contracts > 0 then
+            SendNUIMessage({
+                action = 'receivecontracts',
+                contracts = result
+            })
+        end
+    end)
+end)
+
+RegisterNUICallback('boosting/getcontract', function(_, cb)
+    cb({
+        contracts = Contracts,
+    })
+end)
+
+
+
+
+-- ** DENY CONTRACTS ** --
+local canDeny = true
+
+local function DelayRQ()
+    SetTimeout(10000, function()
+        canDeny = true
+    end)
+end
+
+RegisterNUICallback('boosting/deny', function(data, cb)
+    local contract = data.contractID
+    if not canDeny then
+        cb({
+            status = 'error',
+            message = Lang:t('boosting.laptop.must_wait')
+        })
+        return
+    end
+
+    QBCore.Functions.TriggerCallback('jl-laptop:server:DeclineContract', function(result)
+        if result == "success" then
+            cb({
+                status = 'success',
+                message = Lang:t('boosting.laptop.declinedboost')
+            })
+        else
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.try_again')
+            })
+        end
+        canDeny = false
+        DelayRQ()
+    end, contract)
+end)
+
+
+-- ** TRANSFER CONTRACTS ** --
+
+-- Transfer Boosts between players --
+RegisterNUICallback('boosting/transfer', function(data, cb)
+    local id = data.playerid
+    local contract = data.contractID
+    QBCore.Functions.TriggerCallback('jl-laptop:server:TransferContracts', function(result)
+        if result == "success" then
+            cb({
+                status = 'success',
+                message = Lang:t('boosting.laptop.transfer.success', { id = id })
+            })
+        elseif result == "self" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.transfer.self')
+            })
+        elseif result == "notfound" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.transfer.notfound')
+            })
+        elseif result == "full" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.transfer.full')
+            })
+        elseif result == "error" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.transfer.error')
+            })
+        end
+    end, id, contract)
+end)
+
+-- Cancel Contract --
+-- Todo: add the logic, Zoo's work 🙂 --
+RegisterNUICallback("boosting/cancel", function(data, cb)
+    TriggerServerEvent('jl-laptop:server:CancelBoost', NetID, nil, true)
+    cb("success")
+end)
+
+
+-- Queue Functions --
+RegisterNUICallback('boosting/queue', function(data, cb)
+    QBCore.Functions.TriggerCallback('jl-laptop:server:joinQueue', function(result)
+        if result == "success" then
+            if data.status then
+                cb({
+                    status = 'success',
+                    message = Lang:t('boosting.laptop.queue.success')
+                })
+            else
+                cb({
+                    status = 'success',
+                    message = Lang:t('boosting.laptop.queue.successquit')
+                })
+            end
+        elseif result == "running" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.queue.running')
+            })
+        elseif result == "inqueue" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.queue.inqueue')
+            })
+        elseif result == "error" then
+            cb({
+                status = 'error',
+                message = Lang:t('boosting.laptop.queue.error')
+            })
+        end
+    end, data.status)
+end)
+
+RegisterNetEvent('jl-laptop:client:QueueHandler', function(value)
+    inQueue = value
+end)
+
+
+RegisterNetEvent('jl-laptop:client:setvehicleFuel', function(veh)
+    exports['LegacyFuel']:SetFuel(car, 100.0)
+end)
+
+RegisterNUICallback("boosting/getqueue", function(_, cb)
+    cb(inQueue)
+end)
+
+-- Gets all the reps --
+-- Getters for when you open the boost app --
+RegisterNUICallback("boosting/getrep", function(_, cb)
+    local data = {
+        rep = PlayerData.metadata['carboostrep'] or 0,
+        repconfig = Config.Boosting.TiersPerRep
+    }
+    cb(data)
+end)
+
+
+
+RegisterNUICallback("boosting/expire", function(data, cb)
+    print(data["id"])
+    cb("ok")
+end)
+
+CreateThread(function()
+    exports['qb-target']:AddGlobalVehicle({
+        options = {
+            {
+                label = "Check Vin",
+                icon = "fas fa-car-rear",
+                action = function(entity)
+                    CheckVin(NetworkGetNetworkIdFromEntity(entity))
+                end,
+                canInteract = function(entity)
+                    return isPolice() and IsThisModelACar(GetEntityModel(entity))
+                end
+            }
+        },
+        distance = 1.5
+    })
 end)
